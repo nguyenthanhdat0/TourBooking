@@ -128,3 +128,40 @@ erDiagram
         date startDate
     }
 ```
+
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor C as Khách hàng
+    participant F as Frontend (ReactJS)
+    participant B as Backend (Spring MVC)
+    participant DB as MySQL Database
+    participant P as Cổng thanh toán (VNPay/MoMo)
+
+    C->>F: Bấm nút "Thanh toán dịch vụ"
+    F->>B: Gửi Request tạo giao dịch (POST /api/payment)
+    
+    rect rgb(50, 50, 50)
+        Note right of B: Tạo URL Thanh toán
+        B->>DB: Lưu Transaction mới (Trạng thái: PENDING)
+        B->>P: Gọi API tạo mã thanh toán kèm Chữ ký (Hash)
+        P-->>B: Trả về Payment URL
+        B-->>F: Trả về Payment URL
+    end
+
+    F->>P: Redirect khách hàng sang cổng VNPay/MoMo
+    
+    Note over C, P: Khách hàng nhập thẻ và xác thực OTP
+    P->>C: Trừ tiền thành công
+    
+    par Luồng giao diện (Client-side)
+        P->>F: Chuyển hướng về Return URL
+        F->>C: Hiển thị giao diện "Thành công"
+    and Luồng chạy ngầm IPN (Server-side)
+        P-)B: Gửi Webhook IPN thông báo kết quả giao dịch
+        B->>B: Xác thực chữ ký dữ liệu (Checksum)
+        B->>DB: Cập nhật Transaction (Trạng thái: PAID)
+        B-->>P: Phản hồi HTTP 200 OK (Xác nhận đã nhận)
+    end
+```
